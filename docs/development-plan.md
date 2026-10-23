@@ -1,121 +1,129 @@
-# MarketMind AI — development plan
+# MarketMind AI — Development Plan
 
-This document tracks the implementation plan. Later phases must be verified before the next one starts.
+This document tracks the implementation status of MarketMind AI.
 
-## Design decisions
+## Design Decisions
 
-1. **Monorepo, three services.** React, Express, and FastAPI stay separate so each can be deployed independently without extra tooling such as Nx.
-2. **JavaScript only** in client and server. No TypeScript.
-3. **CommonJS on the server** (`require`) so BCA students can follow Node examples easily. The Vite client uses ES modules.
-4. **Browser talks only to Express.** The Python service is not exposed to the frontend by default. This keeps CORS, auth, and ownership in one place.
-5. **User-owned shop data.** Every product, sale, and analytics query is scoped to `userId` on the server.
-6. **Synthetic public market dataset.** Cross-shop price comparison uses seeded market documents, not other users' private inventory.
-7. **Money math.** Revenue, COGS, and gross profit use recorded line-item prices. Totals are calculated on the server.
-8. **Time-series ML.** Chronological train/test split. Lags and rolling averages are computed without leaking future values. A seasonal-naive or recent-average baseline is always reported.
-9. **Advisor is rule-based first.** An optional LLM can be added later via env vars. The app must work with no paid API.
-10. **Reproducible demo.** Fixed random seed (`DEMO_SEED=42` / `RANDOM_SEED=42`). Seed scripts refuse duplicate shops unless the database is reset.
+1. **Monorepo with three services:** React, Express, and FastAPI remain separate.
+2. **JavaScript only:** The client and server use JavaScript; no TypeScript.
+3. **CommonJS server:** The Express backend uses `require`; the Vite client uses ES modules.
+4. **Express as the frontend API:** The browser communicates with Express, which proxies forecast requests to FastAPI.
+5. **User-owned data:** Product, sales, and analytics queries are scoped to the authenticated user.
+6. **Synthetic market data:** Market comparisons use seeded synthetic market records, not other users' private inventory.
+7. **Consistent financial calculations:** Revenue, COGS, and gross profit use recorded sale prices and quantities.
+8. **Time-series forecasting:** The ML model uses historical demand, lag features, rolling averages, prices, and calendar features.
+9. **Rule-based advisor:** Advisor functionality must be verified before being marked complete.
+10. **Reproducible demo:** Seed scripts use fixed random seeds and support controlled demo-data generation.
 
-## Target folder layout
+## Target Folder Layout
 
 ```text
 MarketMind-AI/
-  client/
-    public/
-    src/
-      api/
-      components/
-      context/
-      hooks/
-      layouts/
-      pages/
-      utils/
-    index.html
-    vite.config.js
-    tailwind.config.js
-    .env.example
-  server/
-    src/
-      config/
-      controllers/
-      middleware/
-      models/
-      routes/
-      services/
-      utils/
-      app.js
-      index.js
-    scripts/
-    tests/
-    .env.example
-  ml-service/
-    app/
-      main.py
-      pipeline.py
-      features.py
-      models.py
-    data/
-    models/
-    tests/
-    requirements.txt
-    .env.example
-  docs/
+├── client/
+│   └── src/
+├── server/
+│   ├── src/
+│   ├── scripts/
+│   └── tests/
+├── ml-service/
+│   ├── app/
+│   ├── data/
+│   ├── models/
+│   ├── scripts/
+│   └── tests/
+└── docs/
 ```
 
-## Calculation policy (used in every later phase)
+## Calculation Policy
 
-- **Revenue** = sum of sold quantity × recorded selling price (completed sales only).
-- **COGS** = sum of sold quantity × recorded cost price.
-- **Gross profit** = revenue − COGS.
-- **Net profit** is not shown as a fact unless expenses exist.
-- Refunded or cancelled sales restore stock when appropriate and are excluded from revenue unless documented otherwise.
-- Date filters are inclusive of the start date and exclusive of the day after the end date (UTC stored, shop-local display later if needed).
+- **Revenue:** Sum of sold quantity × recorded selling price for completed sales.
+- **COGS:** Sum of sold quantity × recorded cost price.
+- **Gross profit:** Revenue − COGS.
+- **Net profit:** Not reported as a fact because operating expenses are not recorded.
+- Cancelled sales are excluded from sales analytics, and successful cancellations restore stock.
+- Date filters use inclusive start and end dates where documented, with UTC date handling.
 
-## Phases
+## Implementation Phases
 
-### Phase 1 — complete
+### Phase 1 — Complete: Project Foundation
 
-Architecture, README, package files, env examples, gitignore, development instructions.
+Established the project structure, package configuration, environment examples, Git ignore rules, and initial architecture.
 
-### Phase 2 — complete: Express foundation
+### Phase 2 — Complete: Express Foundation
 
-Health endpoint, MongoDB connection, user model, register/login/JWT, auth middleware, centralized errors. Verify server startup.
+Implemented the Express application, MongoDB connection, user model, authentication, JWT middleware, health endpoint, and centralized error handling.
 
-Implemented in `server/src/` with Jest tests using MongoDB Memory Server.
+### Phase 3 — Complete: Core Business API
 
-### Phase 3 — complete: Core business API
+Implemented authenticated product CRUD, inventory alerts, sales recording and cancellation, stock validation, optional idempotency keys, date-filtered analytics, and backend integration tests.
 
-Products, sales (stock checks, atomic-enough updates), analytics aggregations, backend tests.
+See [API Documentation](./api-documentation.md).
 
-Implemented authenticated product CRUD and inventory alerts; sales with server-calculated line totals, stock checks/restoration and optional idempotency keys; date-filtered analytics; and integration tests using MongoDB Memory Server. See [API documentation](./api-documentation.md).
+### Phase 4 — Complete: React UI
 
-### Phase 4 — complete: React UI
+Implemented the React + Vite interface, authentication screens, dashboard, inventory and sales pages, and API-connected charts.
 
-Vite + Tailwind, routing, auth pages, dashboard, products, sales, charts wired to the API.
+Build using:
 
-Implemented responsive public, login, registration, dashboard, inventory, and sales screens. The client uses the documented Express response fields and authenticated routes. Build with `npm run build --prefix client`; tests with `npm test --prefix client`.
+```bash
+npm run build --prefix client
+```
 
-### Phase 5 — complete: Synthetic data
+### Phase 5 — Complete: Synthetic Demo Data
 
-Reproducible generator, Mongo seed, ML dataset export, demo account setup without a hardcoded public admin password.
+Implemented reproducible demo-data generation, synthetic shops and products, sales history, synthetic market-price observations, and product-day demand dataset export.
 
-Implemented a seeded MongoDB generator for 10 synthetic shops, 40 products per shop, 270 days of completed sales, and a separate synthetic market-price collection. An existing locally registered account can be explicitly linked for dashboard demos; generated account passwords are random and never displayed. A pandas exporter creates a zero-filled product-day demand CSV. See the README for setup, reset, and export commands.
+The demo data is synthetic and should not be presented as real market data.
 
-### Phase 6 — ML service
+### Phase 6 — Complete: ML Demand Forecasting
 
-Feature pipeline, baseline + regressor, MAE and a second metric, FastAPI `/health`, `/train`, `/forecast`, `/metrics`. Independent pytest.
+Implemented a FastAPI prediction service, trained Random Forest model, exported demand dataset, and demand forecast endpoint.
 
-### Phase 7 — Intelligence features
+Available ML endpoints:
 
-Forecast UI via Express proxy, simulated market intel, rule-based advisor.
+- `GET /health`
+- `POST /predict`
 
-### Phase 8 — Hardening and docs
+Model evaluation:
 
-Remaining tests, empty/error states, academic docs, API examples.
+| Metric | Result |
+|---|---:|
+| Training rows | 85,600 |
+| Testing rows | 11,200 |
+| Test period | 28 days |
+| MAE | 0.348 |
+| RMSE | 0.674 |
 
-### Phase 9 — Repository review
+The trained model uses lagged demand, rolling averages, prices, product category, and calendar features. Forecasts are generated from the exported CSV dataset, not live MongoDB sales history.
 
-Security, isolation, consistent math, instructions, no fake success paths.
+### Phase 7 — Partially Complete: Intelligence Features
 
-## What is intentionally not built in Phase 1
+**Completed:** Express forecast proxy and dashboard forecast chart.
 
-Application source, Mongo connection, UI, seed scripts, trained models, and tests. Those start in Phase 2.
+The authenticated Express endpoint is:
+
+`GET /api/forecasts/:productId?days=7`
+
+It forwards the product ID and requested forecast horizon to the FastAPI `/predict` endpoint.
+
+Market intelligence and rule-based advisor functionality still require implementation verification before this phase can be marked complete.
+
+### Phase 8 — In Progress: Hardening and Documentation
+
+- Update API documentation and architecture diagrams.
+- Verify endpoint behavior and error handling.
+- Review empty states and ML service failures.
+- Verify automated tests and setup instructions.
+- Complete academic documentation and examples.
+
+### Phase 9 — Pending: Repository Review
+
+- Review authentication and data isolation.
+- Check financial calculation consistency.
+- Verify setup and deployment instructions.
+- Remove misleading or unverified functionality claims.
+- Run the available builds and tests before final submission.
+
+## Items Not Included in the Initial Phase
+
+The initial foundation phase did not include the complete application source, database integration, frontend, seed scripts, trained ML models, or tests. These were implemented in later phases.

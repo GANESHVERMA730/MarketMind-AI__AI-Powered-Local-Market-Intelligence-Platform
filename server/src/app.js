@@ -7,6 +7,7 @@ const { healthRoutes } = require('./routes/healthRoutes');
 const { productRoutes } = require('./routes/productRoutes');
 const { saleRoutes } = require('./routes/saleRoutes');
 const { analyticsRoutes } = require('./routes/analyticsRoutes');
+const { forecastRoutes } = require('./routes/forecastRoutes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 function createApp() {
@@ -35,6 +36,7 @@ function createApp() {
   app.use('/api/products', productRoutes);
   app.use('/api/sales', saleRoutes);
   app.use('/api/analytics', analyticsRoutes);
+  app.use('/api/forecasts', forecastRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

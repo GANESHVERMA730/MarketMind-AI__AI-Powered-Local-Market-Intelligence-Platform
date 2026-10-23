@@ -1,46 +1,36 @@
-# System architecture (Phase 1 outline)
-
-This file will be expanded after the services exist. The intended design is below.
+# MarketMind AI — System Architecture
 
 ## Components
 
-| Component | Role |
-| --- | --- |
-| React client | Landing, auth, dashboard, inventory, sales, analytics, forecast UI, market intel, advisor |
-| Express API | Auth, CRUD, aggregations, advisor rules, proxy to ML |
-| MongoDB | Users, shops, products, sales, synthetic market catalog |
-| FastAPI ML | Train, evaluate, 7-day demand forecast |
+| Component | Responsibility |
+|---|---|
+| React + Vite client | Authentication, dashboard, inventory, sales, and forecast chart |
+| Express API | Authentication, product and sales APIs, analytics, and ML proxy |
+| MongoDB | User accounts, products, sales, and synthetic market data |
+| FastAPI ML service | Demand prediction using a trained Random Forest model |
+| CSV dataset | Historical daily product demand used by the ML service |
 
-## Data flow
+## Forecast data flow
 
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant C as React client
-  participant A as Express API
-  participant D as MongoDB
-  participant M as FastAPI ML
+1. The user selects a product and requests a forecast in the dashboard.
+2. React sends an authenticated `GET /api/forecasts/:productId?days=7` request to Express.
+3. Express forwards the product ID and forecast horizon to the ML service using `POST /predict`.
+4. FastAPI loads historical demand from the exported CSV and generates predictions using the trained model.
+5. Express returns the prediction response to React, which displays the forecast chart.
 
-  U->>C: Login / manage shop
-  C->>A: JWT REST requests
-  A->>D: Scoped queries (userId)
-  D-->>A: Shop records
-  A-->>C: JSON (no secrets)
+## Important implementation details
 
-  U->>C: Request 7-day forecast
-  C->>A: POST /api/forecast
-  A->>D: Load product sales history
-  A->>M: POST /forecast
-  M-->>A: Predictions + metrics
-  A-->>C: Forecast (or clear ML-unavailable error)
-```
+- The Python service loads `ml-service/models/demand_model.joblib` and `ml-service/data/processed/product-daily-demand.csv`.
+- Forecasts use the exported dataset, not live MongoDB sales history.
+- The ML service supports forecast horizons from 1 to 30 days.
+- The Express forecast route requires authentication.
+- Market intelligence and the advisor should not be considered implemented until their code is verified.
 
-## Isolation
+## Service endpoints
 
-- Private collections always filter by authenticated `userId`.
-- Market intelligence reads a separate synthetic catalog (`MarketProduct` / equivalent), never another user's sales.
-
-## Failure handling
-
-- If MongoDB is down, the API returns a controlled 503, not a stack trace in production.
-- If the ML service is down, forecast endpoints return a clear error. The UI must not invent numbers.
+| Service | Method | Endpoint |
+|---|---|---|
+| Express | GET | `/api/health` |
+| Express | GET | `/api/forecasts/:productId?days=7` |
+| FastAPI | GET | `/health` |
+| FastAPI | POST | `/predict` |

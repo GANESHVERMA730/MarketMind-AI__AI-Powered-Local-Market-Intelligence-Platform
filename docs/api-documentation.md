@@ -64,3 +64,20 @@ The response includes revenue, COGS, gross profit, order count, and units sold; 
 - `404`: unknown resources or resources belonging to another user.
 - `409`: duplicate SKU.
 - Inventory and sale writes use transactions on MongoDB deployments that support them; standalone MongoDB uses conditional atomic stock updates and compensating updates.
+
+## Demand Forecast
+
+The forecast endpoint requires JWT authentication.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/forecasts/:productId?days=7` | Forecast product demand |
+
+- `productId`: Product ID available in the trained ML dataset.
+- `days`: Forecast horizon from 1 to 30 days; defaults to 7.
+- Express forwards the request to the Python ML service at `POST /predict`.
+- Successful responses contain `product_id`, `product_name`, `forecast_days`, and a `predictions` array with `date` and `predicted_demand`.
+- The ML service returns `404` if the product is absent from its dataset and `400` if demand history is insufficient.
+- The model uses the exported dataset and trained model file. Predictions are based on that dataset, not live MongoDB sales.
+
+Start the ML service before requesting forecasts. Configure `ML_SERVICE_URL` if it is not running at `http://127.0.0.1:8000`.
