@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Build output
+client/dist/
+server/coverage/
+client/coverage/
+ml-service/.pytest_cache/
+*.egg-info/
+.eggs/
+
+# ML artifacts (generated locally)
+ml-service/models/*.joblib
+ml-service/models/*.pkl
+ml-service/data/processed/
+!ml-service/models/.gitkeep
+
+# Logs and OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Test and tooling
+coverage/
+.nyc_output/

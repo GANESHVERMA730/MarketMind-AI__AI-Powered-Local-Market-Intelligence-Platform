@@ -1,0 +1,23 @@
+{
+  "name": "marketmind-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MarketMind AI — AI-powered local market intelligence platform (academic monorepo)",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "dev:ml": "python -m uvicorn app.main:app --reload --app-dir ml-service --port 8000",
+    "test:server": "npm test --prefix server",
+    "test:client": "npm test --prefix client",
+    "test:ml": "python -m pytest ml-service/tests -q",
+    "seed": "node server/scripts/seedDemo.js",
+    "seed:demo": "node server/scripts/seedDemo.js",
+    "seed:demo:reset": "node server/scripts/seedDemo.js --reset",
+    "export:ml-data": "node server/scripts/exportDemandDataset.js",
+    "lint": "echo Lint will be configured after each service is scaffolded."
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
