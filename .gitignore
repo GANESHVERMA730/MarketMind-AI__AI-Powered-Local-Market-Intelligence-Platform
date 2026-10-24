@@ -22,9 +22,6 @@ ml-service/.pytest_cache/
 .eggs/
 
 # ML artifacts (generated locally)
-ml-service/models/*.joblib
-ml-service/models/*.pkl
-ml-service/data/processed/
 !ml-service/models/.gitkeep
 
 # Logs and OS files
