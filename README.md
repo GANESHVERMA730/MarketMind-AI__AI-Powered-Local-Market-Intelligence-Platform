@@ -1,6 +1,8 @@
 # MarketMind AI
 ### AI-Powered Local Market Intelligence Platform
 
+Live Demo: https://market-mind-ai-ai-powered-local-mar.vercel.app
+
 MarketMind AI is a full-stack web application designed to help small retailers manage inventory, track sales, analyze business performance, and estimate future product demand using machine learning.
 
 **Academic Project:** BCA Data Science & AI  
