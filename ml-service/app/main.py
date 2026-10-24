@@ -7,7 +7,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = ROOT / "data/processed/product-daily-demand.csv"
 MODEL_PATH = ROOT / "models/demand_model.joblib"
 
