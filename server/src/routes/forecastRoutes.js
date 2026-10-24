@@ -4,6 +4,74 @@ const { requireAuth } = require('../middleware/auth');
 
 const LOCAL_ML_SERVICE_URL = 'http://127.0.0.1:8000';
 const forecastRoutes = express.Router();
+const SAFE_PREVIEW_TERMS = new Set([
+  'bad',
+  'gateway',
+  'upstream',
+  'connect',
+  'connection',
+  'error',
+  'internal',
+  'server',
+  'proxy',
+  'service',
+  'unavailable',
+  'temporarily',
+  'request',
+  'failed',
+  'failure',
+  'timeout',
+  'timed',
+  'out',
+  'too',
+  'many',
+  'rate',
+  'limit',
+  'not',
+  'found',
+  'method',
+  'allowed',
+  'cloudflare',
+  'nginx',
+  'render',
+]);
+
+function getContentType(response) {
+  const headers = response?.headers;
+  const value =
+    typeof headers?.get === 'function'
+      ? headers.get('content-type')
+      : headers?.['content-type'];
+
+  if (typeof value !== 'string') return 'unknown';
+
+  const mediaType = value.split(';', 1)[0].trim().toLowerCase();
+  return /^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/.test(mediaType)
+    ? mediaType
+    : 'unknown';
+}
+
+function getSafeResponsePreview(data) {
+  if (typeof data !== 'string' && !Buffer.isBuffer(data)) return '[unavailable]';
+
+  const text = (Buffer.isBuffer(data) ? data.toString('utf8') : data)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&(?:nbsp|amp|quot|apos|lt|gt);/gi, ' ')
+    .replace(/\bhttps?:\/\/\S+/gi, ' ')
+    .replace(/\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/gi, ' ')
+    .replace(/\b[a-f\d]{24}\b/gi, ' ')
+    .replace(/\b[A-Za-z0-9_-]{24,}\b/g, ' ');
+
+  const terms = text.toLowerCase().match(/[a-z]{2,}/g) || [];
+  const safeTerms = terms.filter((term) => SAFE_PREVIEW_TERMS.has(term)).slice(0, 20);
+  return safeTerms.join(' ') || '[no safe preview]';
+}
+
+function isJsonContentType(contentType) {
+  return contentType === 'application/json' || contentType.endsWith('+json');
+}
 
 function getPredictionUrl() {
   const configuredUrl = process.env.ML_SERVICE_URL?.trim();
@@ -76,10 +144,20 @@ forecastRoutes.get('/:productId', async (req, res, next) => {
     return res.json({ success: true, data: response.data });
   } catch (error) {
     const upstreamStatus = error.response?.status;
-    console.error('[forecast] ML request failed', {
+    const failureDetails = {
       code: error.code || 'UNKNOWN',
       upstreamStatus: upstreamStatus || null,
-    });
+    };
+
+    if (error.response) {
+      const contentType = getContentType(error.response);
+      failureDetails.contentType = contentType;
+      if (!isJsonContentType(contentType)) {
+        failureDetails.responsePreview = getSafeResponsePreview(error.response.data);
+      }
+    }
+
+    console.error('[forecast] ML request failed', failureDetails);
 
     if (upstreamStatus) {
       if (upstreamStatus < 500) {
@@ -112,4 +190,9 @@ forecastRoutes.get('/:productId', async (req, res, next) => {
   }
 });
 
-module.exports = { forecastRoutes, getPredictionUrl };
+module.exports = {
+  forecastRoutes,
+  getPredictionUrl,
+  getContentType,
+  getSafeResponsePreview,
+};

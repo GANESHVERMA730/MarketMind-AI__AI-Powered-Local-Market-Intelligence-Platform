@@ -95,12 +95,16 @@ describe('forecast route', () => {
     expect(getPredictionUrl()).toBe('https://ml.example.com/predict');
   });
 
-  test('maps upstream server errors to 502 without exposing the upstream body', async () => {
+  test('logs upstream JSON status without exposing its body', async () => {
     process.env.ML_SERVICE_URL = 'https://ml.example.com';
     jest.spyOn(console, 'error').mockImplementation(() => {});
     axios.post.mockRejectedValue({
       code: 'ERR_BAD_RESPONSE',
-      response: { status: 503, data: { detail: 'private upstream diagnostic' } },
+      response: {
+        status: 503,
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+        data: { detail: 'private upstream diagnostic' },
+      },
     });
 
     const response = await request(createForecastApp())
@@ -112,7 +116,38 @@ describe('forecast route', () => {
     expect(console.error).toHaveBeenCalledWith('[forecast] ML request failed', {
       code: 'ERR_BAD_RESPONSE',
       upstreamStatus: 503,
+      contentType: 'application/json',
     });
+  });
+
+  test('logs a safe preview for non-JSON proxy errors without leaking body data', async () => {
+    process.env.ML_SERVICE_URL = 'https://ml.example.com';
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    axios.post.mockRejectedValue({
+      code: 'ERR_BAD_RESPONSE',
+      response: {
+        status: 502,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+        data: '<html><body><h1>502 Bad Gateway</h1><p>upstream connect error. Bibek bibek@example.com 90aa352d04b6d86df9055a07 https://private.example/path bearer-secret-should-not-appear</p></body></html>',
+      },
+    });
+
+    const response = await request(createForecastApp())
+      .get('/api/forecasts/90aa352d04b6d86df9055a07');
+
+    expect(response.status).toBe(502);
+    expect(console.error).toHaveBeenCalledWith('[forecast] ML request failed', {
+      code: 'ERR_BAD_RESPONSE',
+      upstreamStatus: 502,
+      contentType: 'text/html',
+      responsePreview: 'bad gateway upstream connect error',
+    });
+    const loggedDetails = JSON.stringify(console.error.mock.calls[0]);
+    expect(loggedDetails).not.toContain('Bibek');
+    expect(loggedDetails).not.toContain('bibek@example.com');
+    expect(loggedDetails).not.toContain('90aa352d04b6d86df9055a07');
+    expect(loggedDetails).not.toContain('private.example');
+    expect(loggedDetails).not.toContain('bearer-secret');
   });
 
   test('maps upstream timeouts to 504', async () => {
