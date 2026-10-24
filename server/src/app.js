@@ -13,6 +13,8 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 function createApp() {
   const app = express();
 
+  app.set("trust proxy", 1);
+
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(

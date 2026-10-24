@@ -8,8 +8,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_PATH = ROOT / "ml-service/data/processed/product-daily-demand.csv"
-MODEL_PATH = ROOT / "ml-service/models/demand_model.joblib"
+DATA_PATH = ROOT / "data/processed/product-daily-demand.csv"
+MODEL_PATH = ROOT / "models/demand_model.joblib"
 
 app = FastAPI(title="MarketMind AI", version="1.0.0")
 
